@@ -351,43 +351,49 @@ void SimulatorMavlink::update_sensors(const hrt_abstime &time, const mavlink_hil
 void SimulatorMavlink::handle_message(const mavlink_message_t *msg)
 {
 	switch (msg->msgid) {
-	case MAVLINK_MSG_ID_HIL_SENSOR:
+	case MAVLINK_MSG_ID_HIL_SENSOR://107
 		handle_message_hil_sensor(msg);
 		break;
 
-	case MAVLINK_MSG_ID_HIL_OPTICAL_FLOW:
+	case MAVLINK_MSG_ID_HIL_OPTICAL_FLOW: //114
 		handle_message_optical_flow(msg);
 		break;
 
-	case MAVLINK_MSG_ID_ODOMETRY:
+	case MAVLINK_MSG_ID_ODOMETRY: //331
 		handle_message_odometry(msg);
 		break;
 
-	case MAVLINK_MSG_ID_VISION_POSITION_ESTIMATE:
+	case MAVLINK_MSG_ID_VISION_POSITION_ESTIMATE:  //102
 		handle_message_vision_position_estimate(msg);
 		break;
 
-	case MAVLINK_MSG_ID_DISTANCE_SENSOR:
+	case MAVLINK_MSG_ID_DISTANCE_SENSOR: //132
 		handle_message_distance_sensor(msg);
 		break;
 
-	case MAVLINK_MSG_ID_HIL_GPS:
+	case MAVLINK_MSG_ID_HIL_GPS: //113
 		handle_message_hil_gps(msg);
 		break;
+	/* yyf edit--start
+	case MAVLINK_MSG_ID_RC_CHANNELS:  //65
+		handle_message_rc_channels(msg);
+		break;
+	*/
 
-	case MAVLINK_MSG_ID_RC_CHANNELS:
+	case MAVLINK_MSG_ID_HIL_RC_INPUTS_RAW:  //92
 		handle_message_rc_channels(msg);
 		break;
 
-	case MAVLINK_MSG_ID_LANDING_TARGET:
+	// yyf edit end
+	case MAVLINK_MSG_ID_LANDING_TARGET: //149
 		handle_message_landing_target(msg);
 		break;
 
-	case MAVLINK_MSG_ID_HIL_STATE_QUATERNION:
+	case MAVLINK_MSG_ID_HIL_STATE_QUATERNION: //115
 		handle_message_hil_state_quaternion(msg);
 		break;
 
-	case MAVLINK_MSG_ID_RAW_RPM:
+	case MAVLINK_MSG_ID_RAW_RPM:  //339
 		mavlink_raw_rpm_t rpm;
 		mavlink_msg_raw_rpm_decode(msg, &rpm);
 		rpm_s rpmmsg{};
@@ -580,7 +586,7 @@ void SimulatorMavlink::handle_message_hil_state_quaternion(const mavlink_message
 		double lon = hil_state.lon * 1e-7;
 
 		if (!_global_local_proj_ref.isInitialized()) {
-			_global_local_proj_ref.initReference(lat, lon, timestamp);
+			_global_local_proj_ref.initReference(lat, lon);
 			_global_local_alt0 = hil_state.alt / 1000.f;
 		}
 
@@ -892,6 +898,7 @@ void SimulatorMavlink::handle_message_optical_flow(const mavlink_message_t *msg)
 	_sensor_optical_flow_pub.publish(sensor_optical_flow);
 }
 
+/* yyf edit start
 void SimulatorMavlink::handle_message_rc_channels(const mavlink_message_t *msg)
 {
 	mavlink_rc_channels_t rc_channels;
@@ -928,6 +935,45 @@ void SimulatorMavlink::handle_message_rc_channels(const mavlink_message_t *msg)
 	// publish message
 	_input_rc_pub.publish(rc_input);
 }
+
+*/
+void SimulatorMavlink::handle_message_rc_channels(const mavlink_message_t *msg)
+{
+	mavlink_hil_rc_inputs_raw_t rc_channels;
+	mavlink_msg_hil_rc_inputs_raw_decode(msg, &rc_channels);
+
+	input_rc_s rc_input{};
+	rc_input.timestamp_last_signal = hrt_absolute_time();
+	rc_input.channel_count = 12;
+	rc_input.rssi = rc_channels.rssi;
+	rc_input.values[0] = rc_channels.chan1_raw;
+	rc_input.values[1] = rc_channels.chan2_raw;
+	rc_input.values[2] = rc_channels.chan3_raw;
+	rc_input.values[3] = rc_channels.chan4_raw;
+	rc_input.values[4] = rc_channels.chan5_raw;
+	rc_input.values[5] = rc_channels.chan6_raw;
+	rc_input.values[6] = rc_channels.chan7_raw;
+	rc_input.values[7] = rc_channels.chan8_raw;
+	rc_input.values[8] = rc_channels.chan9_raw;
+	rc_input.values[9] = rc_channels.chan10_raw;
+	rc_input.values[10] = rc_channels.chan11_raw;
+	rc_input.values[11] = rc_channels.chan12_raw;
+	rc_input.values[12] = (uint16_t)1000;
+	rc_input.values[13] = (uint16_t)1000;
+	rc_input.values[14] = (uint16_t)1000;
+	rc_input.values[15] = (uint16_t)1000;
+	rc_input.values[16] = (uint16_t)1000;
+	rc_input.values[17] = (uint16_t)1000;
+
+	rc_input.link_quality = -1;
+	rc_input.rssi_dbm = NAN;
+
+	rc_input.timestamp = hrt_absolute_time();
+
+	// publish message
+	_input_rc_pub.publish(rc_input);
+}
+// yyf edit end
 
 void SimulatorMavlink::handle_message_vision_position_estimate(const mavlink_message_t *msg)
 {
